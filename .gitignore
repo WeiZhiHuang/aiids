@@ -1,0 +1,6 @@
+.DS_Store
+CICFlowMeter-4.0/
+package/
+package_out/
+logs/
+package_for_training/
