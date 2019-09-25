@@ -3,21 +3,23 @@ import os
 import csv
 import sys
 import time
+import yaml
 import zipfile
 import argparse
 import requests
-from scapy.all import sniff, wrpcap
+from scapy.all import sniff, wrpcap, PcapWriter
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--interface', default='eth0', help='interface')
-parser.add_argument('-c', '--count', default='10', help='count')
 args = parser.parse_args()
 
+ips = os.popen(
+    "ip a | grep inet | awk '{print $2}' | cut -d '/' -f 1").read().split('\n')
+ips.pop()
+
 workDir = os.path.dirname(os.path.abspath(__file__)) + '/'
-pkgDir = workDir + 'package/'
-pkgOutDir = workDir + 'package_out/'
-pkgForTrainingDir = workDir + 'package_for_training/'
+additoinsDir = workDir + 'additions/'
 
 
 def download_cfm():
@@ -30,47 +32,49 @@ def download_cfm():
     print('Download Complete!')
 
 
+def process_sniffed_packet(p):
+    # print(p.summary())
+    # print(p.show())
+    srcIP = p.sprintf('%IP.src%')
+    sport = p.sprintf('%sport%')
+    dstIP = p.sprintf('%IP.dst%')
+    dport = p.sprintf('%dport%')
+    # print(srcIP, sport, dstIP, dport)
+
+    netstatCmd = 'netstat -tunpe4'
+    if srcIP in ips:
+        ip = srcIP
+        port = sport
+    elif dstIP in ips:
+        ip = dstIP
+        port = dport
+        netstatCmd += 'l'
+    else:
+        return
+    netstatCmd += " | egrep '0.0.0.0:" + port + '|' + ip + \
+        ':' + port + "' | awk '{for (i=7; i<=NF; i++) print $i}'"
+
+    netstatResult = os.popen(netstatCmd).read()
+    if netstatResult:
+        uid = netstatResult.split()[0]
+        pid = netstatResult.split()[2].split('/')[0]
+
+        pInfo = { 'uid': int(uid) }
+
+        with open(additoinsDir + str(p.time) + '.yml', 'w') as yamlFile:
+            if pid != '-':
+                pInfo['pid'] = int(pid)
+                pInfo['comm'] = os.popen('ps -o comm= -p ' + pid).read().split('\n')[0]
+            yaml.dump(pInfo, yamlFile)
+
+    pDump.write(p)
+
+
 if not os.path.isdir(workDir + 'CICFlowMeter-4.0'):
     download_cfm()
 if os.system('netstat > /dev/null 2>&1') == 32512:
     print('netstat Not Found. Please install net-tools!')
     exit()
 
-while True:
-    t = str(time.time())
-    pkgName = t + '.pcap'
-    pkgPath = pkgDir + pkgName
-    pkgOutPath = pkgOutDir + t + '.pcap_Flow.csv'
-    pkgForTrainingPath = pkgForTrainingDir + t + '.csv'
-    wrpcap(pkgPath, sniff(iface=args.interface, count=int(args.count)))
-    os.chdir(workDir + 'CICFlowMeter-4.0/bin')
-    os.system('./cfm ' + workDir + 'package ' + workDir + 'package_out')
-    os.remove(pkgPath)
-    with open(pkgOutPath) as csvFile:
-        rows = csv.reader(csvFile)
-        with open(pkgForTrainingPath, 'w') as newCsvFile:
-            writer = csv.writer(newCsvFile)
-            for index, row in enumerate(rows):
-                if index:
-                    srcIP = row[1]
-                    srcPort = row[2]
-                    dstIP = row[3]
-                    dstPort = row[4]
-
-                    ips = os.popen("ip a | grep inet | awk '{print $2}' | cut -d '/' -f 1").read().split('\n')
-                    ips.pop()
-
-                    if dstIP in ips:
-                        ip = dstIP
-                        port = dstPort
-
-                        pid = os.popen("netstat -tunlp4 | grep -E '0.0.0.0:" + port + '|' + ip + ':' + port + "' | awk '{print $7}'").read().split('/')[0]
-                        uid = os.popen('stat -c "%u" /proc/' + pid).read().split('\n')[0] if pid else ''
-                    # else:
-
-                    row.extend([pid, uid])
-                else:
-                    row.extend(['pid', 'uid'])
-
-                writer.writerow(row)
-    os.remove(pkgOutPath)
+pDump = PcapWriter(workDir + 'package.pcap', append=True, sync=True)
+sniff(iface=args.interface, prn=process_sniffed_packet)

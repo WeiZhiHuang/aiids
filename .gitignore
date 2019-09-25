@@ -1,6 +1,7 @@
 .DS_Store
 CICFlowMeter-4.0/
-package/
-package_out/
+package.pcap
+additions/
+package.pcap_Flow.csv
 logs/
 package_for_training/
