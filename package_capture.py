@@ -1,13 +1,10 @@
-import io
 import os
 import csv
 import sys
 import time
 import yaml
-import zipfile
 import argparse
-import requests
-from scapy.all import sniff, wrpcap, PcapWriter
+from scapy.all import sniff, PcapWriter
 
 
 parser = argparse.ArgumentParser()
@@ -20,16 +17,6 @@ ips.pop()
 
 workDir = os.path.dirname(os.path.abspath(__file__)) + '/'
 additoinsDir = workDir + 'additions/'
-
-
-def download_cfm():
-    print('CICFlowmeter Not Found. Downloading...')
-    r = requests.get(
-        'https://www.unb.ca/cic/_assets/documents/cicflowmeter-4.zip')
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    z.extractall(path=workDir)
-    os.system('chmod +x ' + workDir + 'CICFlowMeter-4.0/bin/cfm')
-    print('Download Complete!')
 
 
 def process_sniffed_packet(p):
@@ -61,17 +48,18 @@ def process_sniffed_packet(p):
 
         pInfo = { 'uid': int(uid) }
 
-        with open(additoinsDir + str(p.time) + '.yml', 'w') as yamlFile:
+        with open(additoinsDir + str(p.time).split('.')[0] + '-' + sport + '-' + dport + '.yml', 'w') as yamlFile:
             if pid != '-':
                 pInfo['pid'] = int(pid)
+                pInfo['cmd'] = os.popen('ps -o cmd= -p ' + pid).read().split('\n')[0]
                 pInfo['comm'] = os.popen('ps -o comm= -p ' + pid).read().split('\n')[0]
             yaml.dump(pInfo, yamlFile)
 
     pDump.write(p)
 
-
-if not os.path.isdir(workDir + 'CICFlowMeter-4.0'):
-    download_cfm()
+if os.system('ip a s ' + args.interface + ' > /dev/null 2>&1') == 256:
+    print('iface ' + args.interface +' Not Found. Please check the arguments!')
+    exit()
 if os.system('netstat > /dev/null 2>&1') == 32512:
     print('netstat Not Found. Please install net-tools!')
     exit()
