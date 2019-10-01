@@ -28,7 +28,7 @@ def process_sniffed_packet(p):
     dport = p.sprintf('%dport%')
     # print(srcIP, sport, dstIP, dport)
 
-    netstatCmd = 'netstat -tunpe4'
+    netstatCmd = 'netstat -tunwpe4'
     if srcIP in ips:
         ip = srcIP
         port = sport
