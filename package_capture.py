@@ -20,6 +20,9 @@ additoinsDir = workDir + 'additions/'
 
 
 def process_sniffed_packet(p):
+    if p.sprintf('%proto%') not in ['6', '17']:
+        return
+
     # print(p.summary())
     # print(p.show())
     srcIP = p.sprintf('%IP.src%')
@@ -28,31 +31,27 @@ def process_sniffed_packet(p):
     dport = p.sprintf('%dport%')
     # print(srcIP, sport, dstIP, dport)
 
-    netstatCmd = 'netstat -tunwpe4'
+    netstatCmd = 'netstat -tunpe4'
     if srcIP in ips:
-        ip = srcIP
-        port = sport
+        netstatCmd += " | egrep '" + srcIP + ':' + \
+            sport + '.*' + dstIP + ':' + dport + "'"
     elif dstIP in ips:
-        ip = dstIP
-        port = dport
-        netstatCmd += 'l'
+        netstatCmd += 'l | grep :' + dport
     else:
         return
-    netstatCmd += " | egrep '0.0.0.0:" + port + '|' + ip + \
-        ':' + port + "' | awk '{for (i=7; i<=NF; i++) print $i}'"
 
-    netstatResult = os.popen(netstatCmd).read()
+    netstatCmd += """ | cut -d'/' -f1 | awk '{printf $7" "$9" "; if ($9 != "-") system("ps o comm= o cmd= p"$9)}'"""
+    # print(netstatCmd)
+
+    netstatResult = os.popen(netstatCmd).read().split()
+    # print(netstatResult)
+
     if netstatResult:
-        uid = netstatResult.split()[0]
-        pid = netstatResult.split()[2].split('/')[0]
-
-        pInfo = { 'uid': int(uid) }
-
         with open(additoinsDir + str(p.time).split('.')[0] + '-' + sport + '-' + dport + '.yml', 'w') as yamlFile:
-            if pid != '-':
-                pInfo['pid'] = int(pid)
-                pInfo['cmd'] = os.popen('ps o cmd= p ' + pid).read().split('\n')[0]
-                pInfo['comm'] = os.popen('ps o comm= p ' + pid).read().split('\n')[0]
+            pInfo = {'uid': int(netstatResult[0])}
+            if len(netstatResult) > 2:
+                pInfo.update({'pid': int(netstatResult[1]),
+                              'comm': netstatResult[2], 'cmd': ' '.join(netstatResult[3:])})
             yaml.dump(pInfo, yamlFile)
 
     pDump.write(p)

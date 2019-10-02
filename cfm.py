@@ -40,9 +40,8 @@ if os.system('./cfm ' + workDir + ' ' + workDir) != 256:
                     try:
                         timestamp = str(time.mktime(time.strptime(
                             row[6], '%d/%m/%Y %I:%M:%S %p'))).split('.')[0]
-                        sport = row[2] if int(row[2]) else '??'
-                        dport = row[4] if int(row[4]) else '??'
-                        yamlFileName = timestamp + '-' + sport + '-' + dport + '.yml'
+                        yamlFileName = timestamp + '-' + \
+                            row[2] + '-' + row[4] + '.yml'
                         with open(workDir + 'additions/' + yamlFileName, 'r') as yamlFile:
                             additions = yaml.safe_load(yamlFile)
                             row.extend(
