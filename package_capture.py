@@ -51,8 +51,8 @@ def process_sniffed_packet(p):
         with open(additoinsDir + str(p.time).split('.')[0] + '-' + sport + '-' + dport + '.yml', 'w') as yamlFile:
             if pid != '-':
                 pInfo['pid'] = int(pid)
-                pInfo['cmd'] = os.popen('ps -o cmd= -p ' + pid).read().split('\n')[0]
-                pInfo['comm'] = os.popen('ps -o comm= -p ' + pid).read().split('\n')[0]
+                pInfo['cmd'] = os.popen('ps o cmd= p ' + pid).read().split('\n')[0]
+                pInfo['comm'] = os.popen('ps o comm= p ' + pid).read().split('\n')[0]
             yaml.dump(pInfo, yamlFile)
 
     pDump.write(p)
