@@ -57,6 +57,7 @@ def process_sniffed_packet(p):
 
     pDump.write(p)
 
+
 if os.system('ip > /dev/null 2>&1') == 32512:
     print('ip Not Found. Please install iproute2!')
     exit()
