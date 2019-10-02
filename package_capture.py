@@ -61,7 +61,7 @@ if os.system('ip > /dev/null 2>&1') == 32512:
     print('ip Not Found. Please install iproute2!')
     exit()
 if os.system('ip a s ' + args.interface + ' > /dev/null 2>&1') == 256:
-    print('iface ' + args.interface +' Not Found. Please check the arguments!')
+    print('iface ' + args.interface + ' Not Found. Please check the arguments!')
     exit()
 if os.system('netstat > /dev/null 2>&1') == 32512:
     print('netstat Not Found. Please install net-tools!')
