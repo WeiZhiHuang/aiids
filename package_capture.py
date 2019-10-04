@@ -20,6 +20,7 @@ additoinsDir = workDir + 'additions/'
 
 
 def process_sniffed_packet(p):
+    pDump.write(p)
     if p.sprintf('%proto%') not in ['6', '17']:
         return
 
@@ -46,18 +47,13 @@ def process_sniffed_packet(p):
     netstatResult = os.popen(netstatCmd).read().split()
     # print(netstatResult)
 
-    if netstatResult == ['0', '-']:
-        return
-
-    if netstatResult:
+    if netstatResult not in ([], ['0', '-']):
         with open(additoinsDir + str(p.time).split('.')[0] + '-' + sport + '-' + dport + '.yml', 'w') as yamlFile:
             pInfo = {'uid': int(netstatResult[0])}
             if len(netstatResult) > 2:
                 pInfo.update({'pid': int(netstatResult[1]),
                               'comm': netstatResult[2], 'cmd': ' '.join(netstatResult[3:])})
             yaml.dump(pInfo, yamlFile)
-
-    pDump.write(p)
 
 
 if os.system('ip > /dev/null 2>&1') == 32512:
