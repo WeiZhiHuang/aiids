@@ -46,6 +46,9 @@ def process_sniffed_packet(p):
     netstatResult = os.popen(netstatCmd).read().split()
     # print(netstatResult)
 
+    if netstatResult == ['0', '-']:
+        return
+
     if netstatResult:
         with open(additoinsDir + str(p.time).split('.')[0] + '-' + sport + '-' + dport + '.yml', 'w') as yamlFile:
             pInfo = {'uid': int(netstatResult[0])}
