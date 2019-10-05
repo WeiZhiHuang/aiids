@@ -54,10 +54,6 @@ def process_sniffed_packet(p):
             yaml.dump(pInfo, yamlFile)
 
 
-def threading_process_siniffed_packet(p):
-    threading.Thread(target=process_sniffed_packet, args=(p,)).start()
-
-
 if os.system('ip > /dev/null 2>&1') == 32512:
     print('ip Not Found. Please install iproute2!')
     exit()
@@ -69,4 +65,5 @@ if os.system('netstat > /dev/null 2>&1') == 32512:
     exit()
 
 pDump = PcapWriter(workDir + 'package.pcap', append=True, sync=True)
-sniff(iface=args.interface, prn=threading_process_siniffed_packet)
+sniff(iface=args.interface, prn=lambda p: threading.Thread(
+    target=process_sniffed_packet, args=(p,)).start())
