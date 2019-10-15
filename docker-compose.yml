@@ -1,0 +1,8 @@
+version: '3'
+services:
+  aiids:
+    build: .
+    volumes:
+      - .:/opt/aiids
+    working_dir: /opt/aiids
+    tty: true
